@@ -1,0 +1,31 @@
+<menu
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="abhishek.redvelvet.com.perfect_call_manager.MainActivity">
+
+    <item
+        android:id="@+id/action_theme"
+        android:orderInCategory="1"
+        android:title="Theme"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_emergency"
+        android:orderInCategory="2"
+        android:title="Emergency Contact"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_call_setting"
+        android:orderInCategory="3"
+        android:title="Call Setting"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_settings"
+        android:orderInCategory="100"
+        android:title="@string/action_settings"
+        app:showAsAction="never" />
+
+</menu>
