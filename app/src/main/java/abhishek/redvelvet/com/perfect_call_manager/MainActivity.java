@@ -10,10 +10,13 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
 
 import abhishek.redvelvet.com.perfect_call_manager.EmergencyNotification.EmergencyActivity;
+import abhishek.redvelvet.com.perfect_call_manager.call_setting.CallSetting;
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import butterknife.OnClick;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -54,12 +57,18 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(new Intent(this,EmergencyActivity.class));
                 break;
             }
-//            case "Call Setting":{
-//
-//                break;
-//            }
+            case "Call Setting":{
+                Intent block = new Intent(MainActivity.this, CallSetting.class);
+                startActivity(block);
+                break;
+            }
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @OnClick(R.id.fab)
+    public void fabClick(View view){
+
     }
 }

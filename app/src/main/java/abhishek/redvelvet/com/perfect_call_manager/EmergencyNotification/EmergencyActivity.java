@@ -56,6 +56,7 @@ public class EmergencyActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_emergency);
+        overridePendingTransition(R.anim.slide_from_top, R.anim.slide_to_bottom);
 
         ButterKnife.bind(this);
 
@@ -86,6 +87,13 @@ public class EmergencyActivity extends Activity {
         }
 
 
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        Toast.makeText(this, "Hello", Toast.LENGTH_SHORT).show();
+        overridePendingTransition(R.anim.slide_from_bottom, R.anim.slide_to_top);
     }
 
     @OnCheckedChanged(R.id.emegy_switch)void OnCheckedChange(boolean isChecked){

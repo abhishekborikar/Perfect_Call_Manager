@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import abhishek.redvelvet.com.perfect_call_manager.CustomRealmMigration;
+import abhishek.redvelvet.com.perfect_call_manager.contacts.LoadAllContacts;
 import abhishek.redvelvet.com.perfect_call_manager.database.BlockedContactsData;
 import io.realm.Realm;
 import io.realm.RealmConfiguration;
@@ -68,26 +69,26 @@ public class AlertMessage extends DialogFragment {
                             public void execute(Realm realm) {
 
                                 //check if the contact already exist in the blocked list
-                                try {
-                                    RealmResults<BlockedContactsData> result = realm.where(BlockedContactsData.class)
-                                            .equalTo(BlockedContactsData.NAME, name)
-                                            .findAll();
+                                RealmResults<BlockedContactsData>result = realm.where(BlockedContactsData.class)
+                                        .equalTo(BlockedContactsData.NAME,name)
+                                        .findAll();
 
-                                    if (result.size() == 0) {
-                                        //fresh contact to block
-                                        BlockedContactsData blockedData = realm.createObject(BlockedContactsData.class, name);
+                                ArrayList numbers = new LoadAllContacts(
+                                        getActivity().getApplicationContext().getContentResolver(),
+                                        getActivity().getApplicationContext()
+                                ).loadNumber(name);
 
-                                        RealmList<String> b_number = new RealmList<String>();
-                                        b_number.addAll(numbers);
+                                HashMap hm = (HashMap)numbers.get(0);
+                                String number = hm.get(RecentFragment.keys[0]).toString();
 
-                                        Toast.makeText(getActivity().getApplicationContext(), "Blocked " + name, Toast.LENGTH_SHORT).show();
-                                    } else {
-                                        Toast.makeText(context, "Already Blocked", Toast.LENGTH_SHORT).show();
-                                        dialog.dismiss();
-                                    }
+                                if(result.size()==0) {
+                                    BlockedContactsData blockedData = realm.createObject(BlockedContactsData.class, (String) name);
+                                    blockedData.setNumber(number+"");
+                                    Toast.makeText(getActivity().getApplicationContext(), "Blocked " + name + " " + number, Toast.LENGTH_SHORT).show();
                                 }
-                                catch (Exception e){
-                                    Log.e("error",""+e);
+                                else{
+                                    Toast.makeText(context, "Already Blocked", Toast.LENGTH_SHORT).show();
+                                    dialog.dismiss();
                                 }
                             }
                         });

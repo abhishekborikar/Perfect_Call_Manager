@@ -13,29 +13,43 @@ import io.realm.annotations.PrimaryKey;
 
 public class BlockedContactsData extends RealmObject {
 
+
+    public void setNumber(String number) {
+        this.number = number;
+    }
+
+    private String      number;
     @PrimaryKey
-    private String  c_name;
-    private RealmList<String> c_number;
+    private String      name;
+    private int         type;
+
+    //TYPES
+    public static final int NO_TYPE = 0;
+    public static final int TYPE_COMPANY = 1;
+    public static final int TYPE_PERSONAL = 2;
 
     //String
     public static final String NAME = "name";
     public static final String NUMBER = "number";
+    public static final String TYPE = "type";
 
-
-
-    public RealmList<String> getC_number() {
-        return c_number;
+    public int getType() {
+        return type;
     }
 
-    public void setC_number(RealmList<String> c_number) {
-        this.c_number = c_number;
+    public void setType(int type) {
+        this.type = type;
+    }
+
+    public String getNumber() {
+        return number;
     }
 
     public String getName() {
-        return c_name;
+        return name;
     }
 
-    public void setName(String c_name) {
-        this.c_name = c_name;
+    public void setName(String name) {
+        this.name = name;
     }
 }

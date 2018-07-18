@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:layout_margin="@dimen/pad_top_bottom"
+    tools:context="abhishek.redvelvet.com.perfect_call_manager.call_setting.CallSetting">
+
+    <Switch
+        android:id="@+id/blk_tel_call"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="@dimen/padding_list_element"
+        android:text="Block Telemarketing Calls"
+        android:textSize="@dimen/normal_font_size"
+        tools:layout_editor_absoluteX="16dp"
+        tools:layout_editor_absoluteY="16dp" />
+
+    <Button
+        android:id="@+id/block_contact_list"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        android:text="Block"
+        android:textAlignment="textStart"
+        android:drawableLeft="@drawable/block_call"
+        android:drawablePadding="30dp"
+        android:paddingLeft="20dp"
+        android:textSize="@dimen/normal_font_size"/>
+
+
+</LinearLayout>

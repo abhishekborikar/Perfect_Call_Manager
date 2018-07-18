@@ -1,3 +1,5 @@
 <resources>
     <dimen name="fab_margin">16dp</dimen>
+    <integer name="slide_animation_duration">300</integer>
+    <integer name="slide_top_bottom">600</integer>
 </resources>

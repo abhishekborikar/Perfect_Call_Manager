@@ -103,6 +103,7 @@ public class LoadAllContacts {
 
                         Log.e("number",number_cr.getCount()+"  "+number);
 
+//                        al.add(""+number);
                         HashMap hm = new HashMap();
                         hm.put(RecentFragment.keys[0],number);
                         hm.put(RecentFragment.keys[1],getType(type));
