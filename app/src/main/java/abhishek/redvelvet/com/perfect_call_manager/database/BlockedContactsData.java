@@ -1,9 +1,6 @@
 package abhishek.redvelvet.com.perfect_call_manager.database;
 
 
-import java.util.ArrayList;
-
-import io.realm.RealmList;
 import io.realm.RealmObject;
 import io.realm.annotations.PrimaryKey;
 

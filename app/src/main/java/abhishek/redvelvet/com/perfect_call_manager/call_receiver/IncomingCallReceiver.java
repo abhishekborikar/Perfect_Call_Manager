@@ -24,8 +24,6 @@ import io.realm.Realm;
 import io.realm.RealmConfiguration;
 import io.realm.RealmResults;
 
-import static abhishek.redvelvet.com.perfect_call_manager.call_setting.CallSetting.TEL_BLK_STATUS;
-import static abhishek.redvelvet.com.perfect_call_manager.call_setting.CallSetting.key;
 import static android.content.Context.MODE_PRIVATE;
 
 /**

@@ -7,7 +7,6 @@ import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.DialogFragment;
-import android.util.Log;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -18,7 +17,6 @@ import abhishek.redvelvet.com.perfect_call_manager.contacts.LoadAllContacts;
 import abhishek.redvelvet.com.perfect_call_manager.database.BlockedContactsData;
 import io.realm.Realm;
 import io.realm.RealmConfiguration;
-import io.realm.RealmList;
 import io.realm.RealmResults;
 
 /**

@@ -1,11 +1,7 @@
 package abhishek.redvelvet.com.perfect_call_manager.fragment;
 
-import android.Manifest;
-import android.content.ContentResolver;
 import android.database.Cursor;
 import android.os.Bundle;
-import android.provider.CallLog;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -13,10 +9,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
-import android.widget.Toast;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
 import abhishek.redvelvet.com.perfect_call_manager.R;
 import abhishek.redvelvet.com.perfect_call_manager.contacts.RecentContacts;

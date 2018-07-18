@@ -2,10 +2,8 @@ package abhishek.redvelvet.com.perfect_call_manager.fragment;
 
 
 import android.content.Intent;
-import android.icu.text.IDNA;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
-import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,16 +11,12 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 
 import abhishek.redvelvet.com.perfect_call_manager.InfoActivity;
-import abhishek.redvelvet.com.perfect_call_manager.contacts.LoadAllContacts;
 import abhishek.redvelvet.com.perfect_call_manager.R;
-import butterknife.BindView;
-import butterknife.BindViews;
-import butterknife.OnItemClick;
+import abhishek.redvelvet.com.perfect_call_manager.contacts.LoadAllContacts;
 
 /**
  * A simple {@link Fragment} subclass.
