@@ -1,0 +1,1015 @@
+Index: app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/call_receiver/IncomingCallReceiver.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/call_receiver/IncomingCallReceiver.java	(revision )
++++ app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/call_receiver/IncomingCallReceiver.java	(revision )
+@@ -1,187 +0,0 @@
+-package abhishek.redvelvet.com.perfect_call_manager.call_receiver;
+-
+-import android.content.BroadcastReceiver;
+-import android.content.Context;
+-import android.content.Intent;
+-import android.content.SharedPreferences;
+-import android.database.Cursor;
+-import android.media.AudioManager;
+-import android.net.Uri;
+-import android.os.Bundle;
+-import android.provider.ContactsContract;
+-import android.telephony.PhoneStateListener;
+-import android.telephony.TelephonyManager;
+-import android.util.Log;
+-import android.widget.Toast;
+-
+-import java.lang.reflect.Method;
+-
+-import abhishek.redvelvet.com.android.Internal.telephony.ITelephony;
+-import abhishek.redvelvet.com.perfect_call_manager.CustomRealmMigration;
+-import abhishek.redvelvet.com.perfect_call_manager.call_setting.CallSetting;
+-import abhishek.redvelvet.com.perfect_call_manager.database.BlockedContactsData;
+-import io.realm.Realm;
+-import io.realm.RealmConfiguration;
+-import io.realm.RealmResults;
+-
+-import static abhishek.redvelvet.com.perfect_call_manager.call_setting.CallSetting.TEL_BLK_STATUS;
+-import static abhishek.redvelvet.com.perfect_call_manager.call_setting.CallSetting.key;
+-import static android.content.Context.MODE_PRIVATE;
+-
+-/**
+- * Created by abhishek on 18/7/18.
+- */
+-
+-public class IncomingCallReceiver extends BroadcastReceiver {
+-    private Cursor cursor = null;
+-    private AudioManager audioManager = null;
+-    String contactNumber = null;
+-
+-
+-    @Override
+-    public void onReceive(final Context context, final Intent intent) throws NullPointerException {
+-
+-        try {
+-            //start intent service
+-            Intent callService = new Intent(context, IncomingCallReceiver.class);
+-            context.startService(callService);
+-
+-            //state Listener class
+-            class StateListener extends PhoneStateListener {
+-                @Override
+-                public void onCallStateChanged(int state, String incomingNumber) {
+-                    super.onCallStateChanged(state, incomingNumber);
+-
+-                    switch (state) {
+-                        case TelephonyManager.CALL_STATE_RINGING: {
+-                            Realm.init(context);
+-
+-                            //get the contact number and display name if available in the contact list
+-//                            String
+-                            contactNumber = null;
+-                            contactNumber = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER);
+-                            String displayName = getName(contactNumber, context);
+-
+-                            //block idea company call series
+-                            if(contactNumber!=null) {
+-
+-                                //-------------------------(Check for status of telemarketing calls)-----------------------------------------
+-                                SharedPreferences preferences = context.getSharedPreferences(CallSetting.TEL_BLK_STATUS,MODE_PRIVATE);
+-
+-                                if(preferences.getBoolean(CallSetting.key,false)) {
+-                                    if (contactNumber.startsWith("+91140") || contactNumber.startsWith("0140") || contactNumber.startsWith("140")) {
+-                                        Log.e("call status company", "rejected" + contactNumber);
+-                                        rejectCall(context, intent);
+-                                        contactNumber = null;
+-                                    }
+-                                }
+-                                //-----------------------------------------------------------------------------
+-
+-                                //----------------------new code to block number--------------------
+-                                Realm.init(context);
+-
+-                                //realm config
+-                                RealmConfiguration config = new RealmConfiguration.Builder()
+-                                        .schemaVersion(4)
+-                                        .migration(new CustomRealmMigration())
+-                                        .build();
+-                                Realm.setDefaultConfiguration(config);
+-
+-                                //block the numbers if feed in the data of Realm
+-                                RealmResults<BlockedContactsData> result =
+-                                        Realm.getDefaultInstance()
+-                                                .where(BlockedContactsData.class)
+-                                                .equalTo(BlockedContactsData.NAME, displayName)
+-                                                .findAll();
+-
+-                                if (result.isEmpty())
+-                                    result = Realm.getDefaultInstance()
+-                                            .where(BlockedContactsData.class)
+-                                            .equalTo(BlockedContactsData.NUMBER, contactNumber)
+-                                            .findAll();
+-                                if (!result.isEmpty()) {
+-                                    rejectCall(context, intent);
+-                                    contactNumber = null;
+-                                }
+-                                //------------------------------------------------------------------
+-
+-                            }
+-                            break;
+-                        }
+-
+-                        //this state occure when phone is disconnected
+-                        case TelephonyManager.CALL_STATE_IDLE: {
+-                            Log.e("call state idle","on");
+-                            break;
+-                        }
+-                        case TelephonyManager.CALL_STATE_OFFHOOK: {
+-                            //called when call is ended
+-                            Log.e("call state offhook","on");
+-                            break;
+-                        }
+-                    }
+-                }
+-            }
+-            ;
+-
+-            //get the incomming calls
+-            StateListener stateListener = new StateListener();
+-            TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+-            telephonyManager.listen(stateListener, PhoneStateListener.LISTEN_CALL_STATE);
+-
+-
+-        } catch (Exception e) {
+-            Log.e("Error in getName", "" + e);
+-            Toast.makeText(context, "Exception " + e, Toast.LENGTH_SHORT).show();
+-        }
+-    }
+-
+-
+-    public String getName(String contactNumber, Context context) {
+-        String displayName = null;
+-
+-        //get the database of android with contentResolver
+-        Uri uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(contactNumber));
+-        String[] projection = new String[]{ContactsContract.PhoneLookup.DISPLAY_NAME};
+-        Cursor cursor = context.getContentResolver().query(uri,
+-                projection,
+-                null,
+-                null,
+-                null
+-        );
+-
+-        if (cursor.moveToFirst()) {
+-            displayName = cursor.getString(0);
+-        }
+-
+-        return displayName;
+-    }
+-
+-    public int getRingerMode(Context context) {
+-        audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+-        return audioManager.getRingerMode();
+-    }
+-
+-    public void rejectCall(Context context, Intent intent) {
+-        TelephonyManager tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+-        try {
+-            Class c = Class.forName(tm.getClass().getName());
+-            Method m = c.getDeclaredMethod("getITelephony");
+-            m.setAccessible(true);
+-            ITelephony telephonyService = (ITelephony) m.invoke(tm);
+-            Bundle bundle = intent.getExtras();
+-            String phoneNumber = bundle.getString("incoming_number");
+-            Log.d("INCOMING", phoneNumber);
+-            if ((phoneNumber != null)) {
+-                telephonyService.endCall();
+-                Log.d("HANG UP", phoneNumber);
+-                contactNumber = null;
+-            }
+-
+-        } catch (Exception e) {
+-            e.printStackTrace();
+-        }
+-    }
+-
+-
+-}
+Index: app/src/main/res/anim/slide_to_right.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/anim/slide_to_right.xml	(revision )
++++ app/src/main/res/anim/slide_to_right.xml	(revision )
+@@ -1,6 +0,0 @@
+-<?xml version="1.0" encoding="utf-8"?>
+-<set xmlns:android="http://schemas.android.com/apk/res/android">
+-    <translate android:fromXDelta="0" android:toXDelta="100%p"
+-        android:interpolator="@android:anim/accelerate_decelerate_interpolator"
+-        android:duration="@integer/slide_animation_duration"/>
+-</set>
+\ No newline at end of file
+Index: app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/EmergencyNotification/EmergencyActivity.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/EmergencyNotification/EmergencyActivity.java	(revision )
++++ app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/EmergencyNotification/EmergencyActivity.java	(date 1531443212000)
+@@ -56,7 +56,6 @@
+     protected void onCreate(Bundle savedInstanceState) {
+         super.onCreate(savedInstanceState);
+         setContentView(R.layout.activity_emergency);
+-        overridePendingTransition(R.anim.slide_from_top, R.anim.slide_to_bottom);
+ 
+         ButterKnife.bind(this);
+ 
+@@ -89,13 +88,6 @@
+ 
+     }
+ 
+-    @Override
+-    public void onBackPressed() {
+-        super.onBackPressed();
+-        Toast.makeText(this, "Hello", Toast.LENGTH_SHORT).show();
+-        overridePendingTransition(R.anim.slide_from_bottom, R.anim.slide_to_top);
+-    }
+-
+     @OnCheckedChanged(R.id.emegy_switch)void OnCheckedChange(boolean isChecked){
+         if(mSwitch.isChecked()) {
+             rl.setVisibility(View.GONE);
+Index: app/src/main/res/anim/slide_from_right.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/anim/slide_from_right.xml	(revision )
++++ app/src/main/res/anim/slide_from_right.xml	(revision )
+@@ -1,8 +0,0 @@
+-<?xml version="1.0" encoding="utf-8"?>
+-<set xmlns:android="http://schemas.android.com/apk/res/android">
+-    <translate
+-        android:fromXDelta="100%p"
+-        android:toXDelta="0"
+-        android:interpolator="@android:anim/accelerate_decelerate_interpolator"
+-        android:duration="@integer/slide_animation_duration"/>
+-</set>
+\ No newline at end of file
+Index: app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/call_setting/blocked_call/ShowBlockedContactsActivity.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/call_setting/blocked_call/ShowBlockedContactsActivity.java	(revision )
++++ app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/call_setting/blocked_call/ShowBlockedContactsActivity.java	(revision )
+@@ -1,142 +0,0 @@
+-package abhishek.redvelvet.com.perfect_call_manager.call_setting.blocked_call;
+-
+-import android.app.AlertDialog;
+-import android.content.DialogInterface;
+-import android.os.Bundle;
+-import android.support.v7.app.AppCompatActivity;
+-import android.util.Log;
+-import android.view.View;
+-import android.widget.AdapterView;
+-import android.widget.ListView;
+-import android.widget.SimpleAdapter;
+-import android.widget.TextView;
+-import android.widget.Toast;
+-
+-import java.util.ArrayList;
+-import java.util.HashMap;
+-
+-import abhishek.redvelvet.com.perfect_call_manager.CustomRealmMigration;
+-import abhishek.redvelvet.com.perfect_call_manager.R;
+-import abhishek.redvelvet.com.perfect_call_manager.database.BlockedContactsData;
+-import io.realm.Realm;
+-import io.realm.RealmConfiguration;
+-import io.realm.RealmResults;
+-
+-/**
+- * Created by abhishek on 18/7/18.
+- */
+-
+-public class ShowBlockedContactsActivity extends AppCompatActivity {
+-
+-    ListView lv;
+-    TextView tv;
+-    ArrayList al = new ArrayList();
+-    final String[] keys = {"name", "number"};
+-    final int[] ids = {R.id.rc_name, R.id.time};
+-    Realm Crealm;
+-    SimpleAdapter adapter;
+-
+-    @Override
+-    protected void onCreate(Bundle savedInstanceState) {
+-        super.onCreate(savedInstanceState);
+-        setContentView(R.layout.fragment_contact);
+-
+-        overridePendingTransition(R.anim.slide_from_right, R.anim.slide_to_left);
+-
+-        lv = (ListView) findViewById(R.id.contactList);
+-
+-        Realm.init(this);
+-
+-        //realm config
+-        RealmConfiguration config = new RealmConfiguration.Builder()
+-                .schemaVersion(4)
+-                .migration(new CustomRealmMigration())
+-                .build();
+-        Realm.setDefaultConfiguration(config);
+-
+-        loadBlockedContacts();
+-        Crealm = Realm.getDefaultInstance();
+-
+-        //unblock alert message
+-        lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+-            @Override
+-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+-                HashMap hm = (HashMap) al.get(position);
+-                final String number = hm.get(keys[1]).toString();
+-                new AlertDialog.Builder(ShowBlockedContactsActivity.this)
+-                        .setTitle("Unblock Contact")
+-                        .setMessage("Do You want to unblock contact?")
+-                        .setPositiveButton("Unblock", new DialogInterface.OnClickListener() {
+-                            @Override
+-                            public void onClick(DialogInterface dialog, int which) {
+-
+-                                //block the numbers if feed in the data of Realm
+-                                Crealm.executeTransactionAsync(
+-                                        new Realm.Transaction() {
+-                                            @Override
+-                                            public void execute(Realm realm) {
+-                                                realm.where(BlockedContactsData.class)
+-                                                        .equalTo(BlockedContactsData.NUMBER, number)
+-                                                        .findAll()
+-                                                        .deleteAllFromRealm();
+-                                            }
+-                                        },
+-                                        new Realm.Transaction.OnSuccess() {
+-                                            @Override
+-                                            public void onSuccess() {
+-                                                al.clear();
+-                                                loadBlockedContacts();
+-                                                adapter.notifyDataSetChanged();
+-                                                Log.e("Sucesssss", "Done");
+-                                            }
+-                                        });
+-                                dialog.dismiss();
+-                            }
+-                        })
+-                        .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+-                            @Override
+-                            public void onClick(DialogInterface dialog, int which) {
+-                                dialog.dismiss();
+-                                Toast.makeText(getApplicationContext(), "Canceled", Toast.LENGTH_SHORT).show();
+-                            }
+-                        })
+-                        .create()
+-                        .show();
+-            }
+-        });
+-
+-    }
+-
+-    public void loadBlockedContacts() {
+-        RealmResults<BlockedContactsData> result = Realm.getDefaultInstance().where(BlockedContactsData.class)
+-                .findAll();
+-        Log.e("result",""+result.size());
+-
+-        if (result != null) {
+-            for (int i = 0; i < result.size(); i++) {
+-
+-                Log.w("name ",""+result.get(i).getName());
+-                HashMap hm = new HashMap();
+-                hm.put(keys[0], result.get(i).getName());
+-                hm.put(keys[1], result.get(i).getNumber());
+-                al.add(hm);
+-            }
+-        } else
+-            Toast.makeText(getApplicationContext(), "No Contact Blocked", Toast.LENGTH_SHORT).show();
+-
+-        adapter = new SimpleAdapter(
+-                ShowBlockedContactsActivity.this,
+-                al,
+-                R.layout.listview_style_recent_contact,
+-                keys,
+-                ids
+-        );
+-        lv.setAdapter(adapter);
+-    }
+-
+-    @Override
+-    public void onBackPressed() {
+-        super.onBackPressed();
+-        overridePendingTransition(R.anim.slide_from_left, R.anim.slide_to_right );
+-    }
+-}
+Index: app/src/main/res/anim/slide_to_bottom.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/anim/slide_to_bottom.xml	(revision )
++++ app/src/main/res/anim/slide_to_bottom.xml	(revision )
+@@ -1,8 +0,0 @@
+-<?xml version="1.0" encoding="utf-8"?>
+-<set xmlns:android="http://schemas.android.com/apk/res/android">
+-    <translate xmlns:android="http://schemas.android.com/apk/res/android"
+-        android:duration="@integer/slide_top_bottom"
+-        android:fromYDelta="0"
+-        android:toYDelta="100%"
+-        android:interpolator="@android:anim/accelerate_decelerate_interpolator"/>
+-</set>
+\ No newline at end of file
+Index: app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/MainActivity.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/MainActivity.java	(revision )
++++ app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/MainActivity.java	(date 1531443212000)
+@@ -10,13 +10,10 @@
+ import android.view.Menu;
+ import android.view.MenuInflater;
+ import android.view.MenuItem;
+-import android.view.View;
+ 
+ import abhishek.redvelvet.com.perfect_call_manager.EmergencyNotification.EmergencyActivity;
+-import abhishek.redvelvet.com.perfect_call_manager.call_setting.CallSetting;
+ import butterknife.BindView;
+ import butterknife.ButterKnife;
+-import butterknife.OnClick;
+ 
+ public class MainActivity extends AppCompatActivity {
+ 
+@@ -57,18 +54,12 @@
+                 startActivity(new Intent(this,EmergencyActivity.class));
+                 break;
+             }
+-            case "Call Setting":{
+-                Intent block = new Intent(MainActivity.this, CallSetting.class);
+-                startActivity(block);
+-                break;
+-            }
++//            case "Call Setting":{
++//
++//                break;
++//            }
+         }
+ 
+         return super.onOptionsItemSelected(item);
+     }
+-
+-    @OnClick(R.id.fab)
+-    public void fabClick(View view){
+-
+-    }
+ }
+Index: app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/contacts/LoadAllContacts.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/contacts/LoadAllContacts.java	(revision )
++++ app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/contacts/LoadAllContacts.java	(date 1531443212000)
+@@ -103,7 +103,6 @@
+ 
+                         Log.e("number",number_cr.getCount()+"  "+number);
+ 
+-//                        al.add(""+number);
+                         HashMap hm = new HashMap();
+                         hm.put(RecentFragment.keys[0],number);
+                         hm.put(RecentFragment.keys[1],getType(type));
+Index: app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/fragment/AlertMessage.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/fragment/AlertMessage.java	(revision )
++++ app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/fragment/AlertMessage.java	(date 1531443212000)
+@@ -14,7 +14,6 @@
+ import java.util.HashMap;
+ 
+ import abhishek.redvelvet.com.perfect_call_manager.CustomRealmMigration;
+-import abhishek.redvelvet.com.perfect_call_manager.contacts.LoadAllContacts;
+ import abhishek.redvelvet.com.perfect_call_manager.database.BlockedContactsData;
+ import io.realm.Realm;
+ import io.realm.RealmConfiguration;
+@@ -69,27 +68,27 @@
+                             public void execute(Realm realm) {
+ 
+                                 //check if the contact already exist in the blocked list
+-                                RealmResults<BlockedContactsData>result = realm.where(BlockedContactsData.class)
+-                                        .equalTo(BlockedContactsData.NAME,name)
+-                                        .findAll();
++                                try {
++                                    RealmResults<BlockedContactsData> result = realm.where(BlockedContactsData.class)
++                                            .equalTo(BlockedContactsData.NAME, name)
++                                            .findAll();
+ 
+-                                ArrayList numbers = new LoadAllContacts(
+-                                        getActivity().getApplicationContext().getContentResolver(),
+-                                        getActivity().getApplicationContext()
+-                                ).loadNumber(name);
+-
+-                                HashMap hm = (HashMap)numbers.get(0);
+-                                String number = hm.get(RecentFragment.keys[0]).toString();
+-
+-                                if(result.size()==0) {
+-                                    BlockedContactsData blockedData = realm.createObject(BlockedContactsData.class, (String) name);
+-                                    blockedData.setNumber(number+"");
+-                                    Toast.makeText(getActivity().getApplicationContext(), "Blocked " + name + " " + number, Toast.LENGTH_SHORT).show();
+-                                }
+-                                else{
+-                                    Toast.makeText(context, "Already Blocked", Toast.LENGTH_SHORT).show();
+-                                    dialog.dismiss();
++                                    if (result.size() == 0) {
++                                        //fresh contact to block
++                                        BlockedContactsData blockedData = realm.createObject(BlockedContactsData.class, name);
++
++                                        RealmList<String> b_number = new RealmList<String>();
++                                        b_number.addAll(numbers);
++
++                                        Toast.makeText(getActivity().getApplicationContext(), "Blocked " + name, Toast.LENGTH_SHORT).show();
++                                    } else {
++                                        Toast.makeText(context, "Already Blocked", Toast.LENGTH_SHORT).show();
++                                        dialog.dismiss();
++                                    }
+                                 }
++                                catch (Exception e){
++                                    Log.e("error",""+e);
++                                }
+                             }
+                         });
+                         //---end code to block---
+Index: app/src/main/res/anim/slide_from_top.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/anim/slide_from_top.xml	(revision )
++++ app/src/main/res/anim/slide_from_top.xml	(revision )
+@@ -1,8 +0,0 @@
+-<?xml version="1.0" encoding="utf-8"?>
+-<set xmlns:android="http://schemas.android.com/apk/res/android">
+-    <translate xmlns:android="http://schemas.android.com/apk/res/android"
+-        android:duration="@integer/slide_top_bottom"
+-        android:fromYDelta="-100%"
+-        android:toYDelta="0"
+-        android:interpolator="@android:anim/accelerate_decelerate_interpolator"/>
+-</set>
+Index: app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/EmergencyNotification/RebootReceiver.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/EmergencyNotification/RebootReceiver.java	(revision )
++++ app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/EmergencyNotification/RebootReceiver.java	(revision )
+@@ -1,24 +0,0 @@
+-package abhishek.redvelvet.com.perfect_call_manager.EmergencyNotification;
+-
+-import android.content.BroadcastReceiver;
+-import android.content.Context;
+-import android.content.Intent;
+-
+-/**
+- * Created by abhishek on 13/7/18.
+- */
+-
+-public class RebootReceiver extends BroadcastReceiver {
+-    @Override
+-    public void onReceive(Context context, Intent intent) {
+-
+-        String status = new EmergencyActivity().getEmgyPrefrence();
+-
+-        if(!status.contains("Empty")){
+-            new Notification(context).makeEmgyNotification();
+-        }
+-        else {
+-            new Notification(context).destoryNotification();
+-        }
+-    }
+-}
+Index: app/src/main/res/anim/slide_from_bottom.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/anim/slide_from_bottom.xml	(revision )
++++ app/src/main/res/anim/slide_from_bottom.xml	(revision )
+@@ -1,8 +0,0 @@
+-<?xml version="1.0" encoding="utf-8"?>
+-<set xmlns:android="http://schemas.android.com/apk/res/android">
+-    <translate xmlns:android="http://schemas.android.com/apk/res/android"
+-        android:duration="@integer/slide_top_bottom"
+-        android:fromYDelta="100%"
+-        android:toYDelta="0%"
+-        android:interpolator="@android:anim/accelerate_decelerate_interpolator"/>
+-</set>
+\ No newline at end of file
+Index: app/src/main/res/anim/slide_to_left.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/anim/slide_to_left.xml	(revision )
++++ app/src/main/res/anim/slide_to_left.xml	(revision )
+@@ -1,8 +0,0 @@
+-<?xml version="1.0" encoding="utf-8"?>
+-<set xmlns:android="http://schemas.android.com/apk/res/android">
+-    <translate
+-        android:fromXDelta="0"
+-        android:toXDelta="-100%p"
+-        android:interpolator="@android:anim/accelerate_decelerate_interpolator"
+-        android:duration="@integer/slide_animation_duration"/>
+-</set>
+\ No newline at end of file
+Index: app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/call_setting/CallSetting.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/call_setting/CallSetting.java	(revision )
++++ app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/call_setting/CallSetting.java	(revision )
+@@ -1,63 +0,0 @@
+-package abhishek.redvelvet.com.perfect_call_manager.call_setting;
+-
+-import android.content.Intent;
+-import android.content.SharedPreferences;
+-import android.support.v7.app.AppCompatActivity;
+-import android.os.Bundle;
+-import android.view.View;
+-import android.widget.CompoundButton;
+-import android.widget.Toast;
+-
+-import java.util.prefs.Preferences;
+-
+-import abhishek.redvelvet.com.perfect_call_manager.R;
+-import abhishek.redvelvet.com.perfect_call_manager.call_setting.blocked_call.ShowBlockedContactsActivity;
+-import butterknife.ButterKnife;
+-import butterknife.OnCheckedChanged;
+-import butterknife.OnClick;
+-
+-public class CallSetting extends AppCompatActivity {
+-
+-    public static final String TEL_BLK_STATUS = "tele_marketing_call_block_status";
+-    public static final String key = "status";
+-
+-    @Override
+-    protected void onCreate(Bundle savedInstanceState) {
+-        super.onCreate(savedInstanceState);
+-        setContentView(R.layout.activity_call_setting);
+-        overridePendingTransition(R.anim.slide_from_right, R.anim.slide_to_left);
+-
+-        ButterKnife.bind(this);
+-    }
+-
+-    @Override
+-    public void onBackPressed() {
+-        super.onBackPressed();
+-
+-        overridePendingTransition(R.anim.slide_from_left, R.anim.slide_to_right );
+-    }
+-
+-    @OnCheckedChanged(R.id.blk_tel_call)
+-    public void checkedChangedListener(CompoundButton buttonView, boolean isChecked){
+-        if (isChecked){
+-
+-            SharedPreferences.Editor tel_blk_call = getSharedPreferences(TEL_BLK_STATUS, MODE_PRIVATE).edit();
+-            tel_blk_call.putBoolean(key,true);
+-            tel_blk_call.commit();
+-
+-            Toast.makeText(this, "Blocked", Toast.LENGTH_SHORT).show();
+-        }
+-        else{
+-            SharedPreferences.Editor tel_blk_call = getSharedPreferences(TEL_BLK_STATUS, MODE_PRIVATE).edit();
+-            tel_blk_call.putBoolean(key,false);
+-            tel_blk_call.commit();
+-            Toast.makeText(this, "Unblocked", Toast.LENGTH_SHORT).show();
+-        }
+-    }
+-
+-    @OnClick(R.id.block_contact_list)
+-    public void onClick(View v){
+-        startActivity(new Intent(this,ShowBlockedContactsActivity.class));
+-    }
+-
+-}
+Index: app/src/main/res/values/dimens.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/values/dimens.xml	(revision )
++++ app/src/main/res/values/dimens.xml	(date 1531443212000)
+@@ -1,5 +1,3 @@
+ <resources>
+     <dimen name="fab_margin">16dp</dimen>
+-    <integer name="slide_animation_duration">300</integer>
+-    <integer name="slide_top_bottom">600</integer>
+ </resources>
+Index: app/src/main/res/layout/activity_call_setting.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/layout/activity_call_setting.xml	(revision )
++++ app/src/main/res/layout/activity_call_setting.xml	(revision )
+@@ -1,35 +0,0 @@
+-<?xml version="1.0" encoding="utf-8"?>
+-<LinearLayout
+-    xmlns:android="http://schemas.android.com/apk/res/android"
+-    xmlns:app="http://schemas.android.com/apk/res-auto"
+-    xmlns:tools="http://schemas.android.com/tools"
+-    android:layout_width="match_parent"
+-    android:layout_height="match_parent"
+-    android:orientation="vertical"
+-    android:layout_margin="@dimen/pad_top_bottom"
+-    tools:context="abhishek.redvelvet.com.perfect_call_manager.call_setting.CallSetting">
+-
+-    <Switch
+-        android:id="@+id/blk_tel_call"
+-        android:layout_width="match_parent"
+-        android:layout_height="wrap_content"
+-        android:padding="@dimen/padding_list_element"
+-        android:text="Block Telemarketing Calls"
+-        android:textSize="@dimen/normal_font_size"
+-        tools:layout_editor_absoluteX="16dp"
+-        tools:layout_editor_absoluteY="16dp" />
+-
+-    <Button
+-        android:id="@+id/block_contact_list"
+-        android:layout_width="match_parent"
+-        android:layout_height="wrap_content"
+-        android:background="@android:color/transparent"
+-        android:text="Block"
+-        android:textAlignment="textStart"
+-        android:drawableLeft="@drawable/block_call"
+-        android:drawablePadding="30dp"
+-        android:paddingLeft="20dp"
+-        android:textSize="@dimen/normal_font_size"/>
+-
+-
+-</LinearLayout>
+Index: app/src/main/AndroidManifest.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/AndroidManifest.xml	(revision )
++++ app/src/main/AndroidManifest.xml	(date 1531443212000)
+@@ -19,7 +19,6 @@
+     <uses-permission android:name="android.permission.INTERNET" />
+     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+ 
+     <application
+         android:allowBackup="true"
+@@ -41,37 +40,18 @@
+         <activity
+             android:name=".InfoActivity"
+             android:label="Info"
+-            android:theme="@style/AppTheme.NoActionBar" />
+-        <activity
+-            android:name=".EmergencyNotification.EmergencyActivity"
+-            android:label="Emergency Contact" />
+-        <activity
+-            android:name=".call_setting.blocked_call.ShowBlockedContactsActivity"
+-            android:label="Blocked Contact"
+-            />
+-
+-        <receiver
+-            android:name=".EmergencyNotification.ClickReceiver"
++            android:theme="@style/AppTheme.NoActionBar"></activity>
++        <activity android:name=".EmergencyNotification.EmergencyActivity"
++            android:label="Emergency Contact"></activity>
++        
++        <receiver android:name=".EmergencyNotification.ClickReceiver"
+             android:enabled="true"
+             android:exported="true">
+             <intent-filter>
+                 <action android:name="button_click" />
+             </intent-filter>
+         </receiver>
+-        <receiver
+-            android:name=".EmergencyNotification.RebootReceiver"
+-            android:enabled="true"
+-            android:exported="true">
+-            <intent-filter>
+-                <action android:name="android.intent.action.REBOOT" />
+-            </intent-filter>
+-        </receiver>
+-        <receiver
+-            android:name=".call_receiver.IncomingCallReceiver"
+-            android:enabled="true"
+-            android:exported="true"/>
+-
+-        <activity android:name=".call_setting.CallSetting"></activity>
+     </application>
++    
+ 
+ </manifest>
+\ No newline at end of file
+Index: app/src/main/java/abhishek/redvelvet/com/android/Internal/telephony/ITelephony.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/abhishek/redvelvet/com/android/Internal/telephony/ITelephony.java	(revision )
++++ app/src/main/java/abhishek/redvelvet/com/android/Internal/telephony/ITelephony.java	(revision )
+@@ -1,14 +0,0 @@
+-package abhishek.redvelvet.com.android.Internal.telephony;
+-
+-/**
+- * Created by abhishek on 18/7/18.
+- */
+-
+-public interface ITelephony
+-//        extends android.os.IInterface
+-{
+-    boolean endCall();
+-    void answerRingingCall();
+-    void silenceRinger();
+-}
+-
+Index: .idea/vcs.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- .idea/vcs.xml	(revision )
++++ .idea/vcs.xml	(revision )
+@@ -1,6 +0,0 @@
+-<?xml version="1.0" encoding="UTF-8"?>
+-<project version="4">
+-  <component name="VcsDirectoryMappings">
+-    <mapping directory="$PROJECT_DIR$" vcs="Git" />
+-  </component>
+-</project>
+\ No newline at end of file
+Index: app/src/main/res/anim/slide_to_top.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/anim/slide_to_top.xml	(revision )
++++ app/src/main/res/anim/slide_to_top.xml	(revision )
+@@ -1,8 +0,0 @@
+-<?xml version="1.0" encoding="utf-8"?>
+-<set xmlns:android="http://schemas.android.com/apk/res/android">
+-    <translate xmlns:android="http://schemas.android.com/apk/res/android"
+-        android:duration="@integer/slide_top_bottom"
+-        android:fromYDelta="0%"
+-        android:toYDelta="-100%"
+-        android:interpolator="@android:anim/accelerate_decelerate_interpolator"/>
+-</set>
+\ No newline at end of file
+Index: app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/database/BlockedContactsData.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/database/BlockedContactsData.java	(revision )
++++ app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/database/BlockedContactsData.java	(date 1531443212000)
+@@ -13,43 +13,29 @@
+ 
+ public class BlockedContactsData extends RealmObject {
+ 
+-
+-    public void setNumber(String number) {
+-        this.number = number;
+-    }
+-
+-    private String      number;
+     @PrimaryKey
+-    private String      name;
+-    private int         type;
+-
+-    //TYPES
+-    public static final int NO_TYPE = 0;
+-    public static final int TYPE_COMPANY = 1;
+-    public static final int TYPE_PERSONAL = 2;
++    private String  c_name;
++    private RealmList<String> c_number;
+ 
+     //String
+     public static final String NAME = "name";
+     public static final String NUMBER = "number";
+-    public static final String TYPE = "type";
+ 
+-    public int getType() {
+-        return type;
+-    }
+ 
+-    public void setType(int type) {
+-        this.type = type;
++
++    public RealmList<String> getC_number() {
++        return c_number;
+     }
+ 
+-    public String getNumber() {
+-        return number;
++    public void setC_number(RealmList<String> c_number) {
++        this.c_number = c_number;
+     }
+ 
+     public String getName() {
+-        return name;
++        return c_name;
+     }
+ 
+-    public void setName(String name) {
+-        this.name = name;
++    public void setName(String c_name) {
++        this.c_name = c_name;
+     }
+ }
+Index: app/src/main/res/anim/slide_from_left.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/anim/slide_from_left.xml	(revision )
++++ app/src/main/res/anim/slide_from_left.xml	(revision )
+@@ -1,8 +0,0 @@
+-<?xml version="1.0" encoding="utf-8"?>
+-<set xmlns:android="http://schemas.android.com/apk/res/android">
+-    <translate
+-        android:fromXDelta="-100%p"
+-        android:toXDelta="0"
+-        android:interpolator="@android:anim/accelerate_decelerate_interpolator"
+-        android:duration="@integer/slide_animation_duration"/>
+-</set>
+\ No newline at end of file
+Index: app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/animation/SlideUtil.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/animation/SlideUtil.java	(revision )
++++ app/src/main/java/abhishek/redvelvet/com/perfect_call_manager/animation/SlideUtil.java	(revision )
+@@ -1,41 +0,0 @@
+-package abhishek.redvelvet.com.perfect_call_manager.animation;
+-
+-import android.content.Context;
+-import android.view.View;
+-import android.view.animation.AnimationUtils;
+-
+-import abhishek.redvelvet.com.perfect_call_manager.R;
+-
+-/**
+- * Created by abhishek on 17/7/18.
+- */
+-
+-public class SlideUtil {
+-
+-    static Context context;
+-    static View view;
+-    public SlideUtil(Context context,View view){
+-        this.context = context;
+-        this.view = view;
+-    }
+-
+-    public static void slideInFromLeft(){
+-        runAnimation(R.anim.slide_from_left);
+-    }
+-
+-    public static void slideOutToLeft(){
+-        runAnimation(R.anim.slide_to_left);
+-    }
+-
+-    public static void slideInFromRight(){
+-        runAnimation(R.anim.slide_from_right);
+-    }
+-
+-    public static void slideOutToRight(){
+-        runAnimation(R.anim.slide_to_right);
+-    }
+-
+-    private static void runAnimation(int animationId){
+-        view.startAnimation(AnimationUtils.loadAnimation(context,animationId));
+-    }
+-}
+diff --git app/src/main/res/drawable/block_call.png app/src/main/res/drawable/block_call.png
+deleted file mode 100644
+index ebfb5ce997474cc958e19e3f84c0e3cb491060fe..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+zc%17D@N?(olHy`uVBq!ia0vp^0wB!63?wyl`GbKJOS+@4BLl<6e(pbstU$g(vPY0F
+z14ES>14Ba#1H&(%P{RubhEf9thF1v;3|2E37{m+a><Y92O8gJ-32_C|#d1;(f_$d@
+zJf?g+PJ;YJ@>0c$lA>&^*)meOauWKy+{JQotgNieFu=mXVk^j-DkEB^Af7KH<t{7$
+z6a?zclamH2W@2Ija!vSn40yRq6vTmSpk6yczC3veph%jGgr~3o&;+13&}u_I?qpeU
+zaW>XcB^fq0HlTR1oTQU5f2EQ%Pyx^=4h{|$7~tmS2KktU1xP~N17rgkKxGhdh_USK
+z>_9;vn+XhnB0M}ioSd9ML7)`S7A`I>h_OIjb3dDh0V$u7AirP+oBOX{-!ZiNn-}s?
+zYvub7?`j{HTSQ&``NsLfx8H9*n7=l7==Hwg(%wH@@7w;U2COr_qxSZ<<I#UL;!FqF
+zru?cj{K>NZ&nLH}<DY*0?V0%D1khZ@ByV>Yh7ML)4<LuLz$3C47?;;Un9)gNb_Gz7
+zy~NYkmHiPrFS8c!kv=I6pwM1V7sn8Z%c19fhBq<ruzy&eR5_tZ++})-=7Y$<z_O~R
+zrVcOu|Bshh|KVZX&2N>}w;L>iG8KzU_T*1I`?RsCqAAI9(rKQlt0I_RafK*NlJr|R
+zcO!>I`i_JhEL&EyHNO+8yzcP1?di6wZ4ZTKid}fIp`^N&$L1E_V&n4fO$%%a650F3
+zCVfn4JI~&*==~m-pQddS-&y6qm!H3X)!(n`_czJ++5T%^@_**Z5-}Isv)`-hyy7HO
+z7#ANc+Immo0N=~IlD$t{_lE*KqFUk_QIe8al4_M)lnSI6j0_AdbPddP4UIz#jIB(J
+ztPG8{4UDV|3@VRLID?`gH$NpatrE8ej#(N7Kn;>04Z-<oCFO}lsSM@i<$9TU*~Q6;
+a1*v-ZMd`EO*+>BuF?hQAxvX<aXaWGezxLJu
+
