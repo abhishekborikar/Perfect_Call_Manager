@@ -13,6 +13,7 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.telephony.PhoneNumberUtils;
 import android.util.Log;
+import android.view.ActionMode;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.ImageView;
@@ -49,7 +50,7 @@ public class InfoActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_info);
-
+        overridePendingTransition(R.anim.slide_from_bottom,R.anim.slide_to_top);
         ButterKnife.bind(this);
 
     }
@@ -91,6 +92,17 @@ public class InfoActivity extends AppCompatActivity {
         
     }
 
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        overridePendingTransition(R.anim.slide_from_top,R.anim.slide_to_bottom);
+    }
+
+    @Override
+    public void onActionModeFinished(ActionMode mode) {
+        super.onActionModeFinished(mode);
+        overridePendingTransition(R.anim.slide_from_top,R.anim.slide_to_bottom);
+    }
 
     @OnItemClick(R.id.info_numbers) void onItemClick(int position){
 
